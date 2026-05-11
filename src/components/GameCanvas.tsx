@@ -1,11 +1,15 @@
 import React, { useEffect, useRef } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useGameEngine } from '../hooks/useGameEngine';
 import { GameUI } from './GameUI';
 import { GameOverScreen } from './GameOverScreen';
 import { StartScreen } from './StartScreen';
+import { WalletConnect } from './WalletConnect';
+import { Leaderboard } from './Leaderboard';
 
 export const GameCanvas: React.FC = () => {
   const { canvasRef, gameState, score, highScore, startGame, setLane } = useGameEngine();
+  const [showLeaderboard, setShowLeaderboard] = React.useState(false);
   const touchStartRef = useRef<{ x: number, y: number } | null>(null);
 
   // Keyboard controls
@@ -59,24 +63,35 @@ export const GameCanvas: React.FC = () => {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      <WalletConnect isVisible={(gameState === 'menu' || gameState === 'gameover') && !showLeaderboard} />
       <canvas
         ref={canvasRef}
         className="block w-full h-full"
       />
 
-      {gameState === 'menu' && (
-        <StartScreen onStart={startGame} />
+      <AnimatePresence>
+        {showLeaderboard && (
+          <Leaderboard onClose={() => setShowLeaderboard(false)} />
+        )}
+      </AnimatePresence>
+
+      {gameState === 'menu' && !showLeaderboard && (
+        <StartScreen 
+          onStart={startGame} 
+          onShowLeaderboard={() => setShowLeaderboard(true)} 
+        />
       )}
 
       {gameState === 'playing' && (
         <GameUI score={score} highScore={highScore} />
       )}
 
-      {gameState === 'gameover' && (
+      {gameState === 'gameover' && !showLeaderboard && (
         <GameOverScreen 
           score={score} 
           highScore={highScore} 
           onRestart={startGame} 
+          onShowLeaderboard={() => setShowLeaderboard(true)}
         />
       )}
     </div>
