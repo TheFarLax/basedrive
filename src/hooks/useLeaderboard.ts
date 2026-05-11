@@ -1,6 +1,6 @@
 import { usePublicClient } from 'wagmi';
 import { useQuery } from '@tanstack/react-query';
-import { decodeEventLog } from 'viem';
+import { decodeEventLog, getAbiItem } from 'viem';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../config/contracts';
 
 export interface LeaderboardEntry {
@@ -27,8 +27,10 @@ export const useLeaderboard = () => {
         
         const logs = await publicClient.getLogs({
           address: CONTRACT_ADDRESS,
-          abi: CONTRACT_ABI,
-          eventName: 'ScoreSubmitted',
+          event: getAbiItem({
+            abi: CONTRACT_ABI,
+            name: 'ScoreSubmitted',
+          }),
           fromBlock: DEPLOYMENT_BLOCK,
         });
 
