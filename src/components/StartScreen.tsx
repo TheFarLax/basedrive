@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAccount, useConnect, useSwitchChain, useChainId } from 'wagmi';
 import { base } from 'wagmi/chains';

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useChainId, useSwitchChain } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from '../config/contracts';
-import { CheckCircle2, Trophy, Loader2, AlertCircle, Share2 } from 'lucide-react';
+import { CheckCircle2, Trophy, Loader2, AlertCircle, Share2, RefreshCw } from 'lucide-react';
 
 interface GameOverScreenProps {
   score: number;
