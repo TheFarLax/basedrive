@@ -7,10 +7,22 @@ import { StartScreen } from './StartScreen';
 import { WalletConnect } from './WalletConnect';
 import { Leaderboard } from './Leaderboard';
 
+import { useAccount, useChainId } from 'wagmi';
+import { base } from 'wagmi/chains';
+
 export const GameCanvas: React.FC = () => {
-  const { canvasRef, gameState, score, highScore, startGame, setLane } = useGameEngine();
+  const { canvasRef, gameState, score, highScore, startGame, setLane, resetGame } = useGameEngine();
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
   const [showLeaderboard, setShowLeaderboard] = React.useState(false);
   const touchStartRef = useRef<{ x: number, y: number } | null>(null);
+
+  // Strict enforcement: Reset to menu if disconnected or wrong network during play
+  useEffect(() => {
+    if (gameState === 'playing' && (!isConnected || chainId !== base.id)) {
+      resetGame();
+    }
+  }, [isConnected, chainId, gameState, resetGame]);
 
   // Keyboard controls
   useEffect(() => {

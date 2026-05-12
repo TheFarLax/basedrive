@@ -450,12 +450,19 @@ export function useGameEngine() {
     ctx.fillRect(0, 0, width, height);
   };
 
+  const resetGame = useCallback(() => {
+    state.current.isGameOver = true;
+    audio.stopEngine();
+    setGameState('menu');
+  }, []);
+
   return {
     canvasRef,
     gameState,
     score,
     highScore,
     startGame,
-    setLane
+    setLane,
+    resetGame
   };
 }

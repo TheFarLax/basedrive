@@ -17,13 +17,9 @@ export const useLeaderboard = () => {
   return useQuery({
     queryKey: ['leaderboard'],
     queryFn: async () => {
-      if (!publicClient) {
-        console.warn('Leaderboard: publicClient not available');
-        return [];
-      }
+      if (!publicClient) return [];
 
       try {
-        console.log('Leaderboard: Fetching events from block', DEPLOYMENT_BLOCK);
         
         const logs = await publicClient.getLogs({
           address: CONTRACT_ADDRESS,
@@ -34,7 +30,6 @@ export const useLeaderboard = () => {
           fromBlock: DEPLOYMENT_BLOCK,
         });
 
-        console.log(`Leaderboard: Found ${logs.length} raw events`);
 
         const scoresMap = new Map<string, number>();
 
@@ -51,7 +46,6 @@ export const useLeaderboard = () => {
               });
               if (decoded.eventName === 'ScoreSubmitted') {
                 args = decoded.args;
-                console.log(`Leaderboard: Manually decoded log ${index}`);
               }
             } catch (decodeError) {
               console.error(`Leaderboard: Manual decode failed for log ${index}`, decodeError);
@@ -62,9 +56,6 @@ export const useLeaderboard = () => {
             const player = args.player as string;
             const score = Number(args.score);
             
-            if (index === 0) {
-              console.log('Leaderboard: Successfully parsed entry:', { player, score });
-            }
 
             const currentMax = scoresMap.get(player) || 0;
             if (score > currentMax) {
@@ -79,7 +70,6 @@ export const useLeaderboard = () => {
           .map(([player, score]) => ({ player, score }))
           .sort((a, b) => b.score - a.score);
 
-        console.log('Leaderboard: Final processed count:', result.length);
 
         if (result.length > 0) {
           localStorage.setItem('basedrive_leaderboard_cache', JSON.stringify(result));

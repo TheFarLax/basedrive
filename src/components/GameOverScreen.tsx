@@ -15,7 +15,7 @@ interface GameOverScreenProps {
 export const GameOverScreen: React.FC<GameOverScreenProps> = ({ score, highScore, onRestart, onShowLeaderboard }) => {
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
+  const { switchChainAsync, isPending: isSwitching, error: switchError } = useSwitchChain();
   const [isSubmitted, setIsSubmitted] = useState(false);
   
   const { data: hash, writeContract, isPending, error } = useWriteContract();
@@ -30,22 +30,30 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ score, highScore
     }
   }, [isSuccess]);
 
-  const handleSubmission = () => {
-    if (chainId !== base.id) {
-      switchChain({ chainId: base.id });
-      return;
-    }
+  const handleSubmission = async () => {
+    try {
+      if (chainId !== base.id) {
+        await switchChainAsync({ chainId: base.id });
+        return;
+      }
 
-    writeContract({
-      address: CONTRACT_ADDRESS,
-      abi: CONTRACT_ABI,
-      functionName: 'submitScore',
-      args: [BigInt(score)],
-    });
+      writeContract({
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: 'submitScore',
+        args: [BigInt(score)],
+        chainId: base.id, 
+      });
+    } catch (err) {
+      // Errors are handled via UI states (error/switchError)
+    }
   };
 
   const isNewHighScore = score >= highScore && score > 0;
+  const isWrongNetwork = isConnected && chainId !== base.id;
   const canSubmit = isConnected && isNewHighScore && !isSubmitted;
+
+
 
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md pointer-events-auto z-40 px-4">
@@ -53,8 +61,58 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ score, highScore
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="glass-card p-8 rounded-[2rem] flex flex-col items-center border border-white/10 shadow-[0_0_50px_rgba(0,82,255,0.2)] max-w-sm w-full"
+        className="glass-card p-8 rounded-[2rem] flex flex-col items-center border border-white/10 shadow-[0_0_50px_rgba(0,82,255,0.2)] max-w-sm w-full relative overflow-hidden"
       >
+        {/* Network Switch Overlay - Prominent UX */}
+        <AnimatePresence>
+          {isWrongNetwork && !isSubmitted && (
+            <motion.div
+              initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+              animate={{ opacity: 1, backdropFilter: 'blur(10px)' }}
+              exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+              className="absolute inset-0 z-50 bg-black/60 flex flex-col items-center justify-center p-8 text-center"
+            >
+              <motion.div
+                initial={{ scale: 0.8, y: 10 }}
+                animate={{ scale: 1, y: 0 }}
+                className="flex flex-col items-center"
+              >
+                <div className="w-16 h-16 rounded-full bg-neon-cyan/10 flex items-center justify-center mb-4 border border-neon-cyan/30 animate-pulse">
+                  <RefreshCw className="text-neon-cyan w-8 h-8" />
+                </div>
+                <h3 className="text-white text-xl font-display tracking-widest mb-2 uppercase">
+                  Base Required
+                </h3>
+                <p className="text-white/60 text-xs font-mono mb-6 leading-relaxed">
+                  Verify your score on the Base network to join the global leaderboard.
+                </p>
+                
+                <button
+                  onClick={handleSubmission}
+                  disabled={isSwitching}
+                  className="w-full py-4 bg-neon-cyan text-black font-bold text-sm rounded-xl shadow-[0_0_20px_rgba(0,240,255,0.3)] hover:shadow-[0_0_30px_rgba(0,240,255,0.5)] transition-all flex items-center justify-center gap-2 uppercase tracking-widest"
+                >
+                  {isSwitching ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} />
+                      <span>Switching to Base...</span>
+                    </>
+                  ) : (
+                    <span>Switch to Base</span>
+                  )}
+                </button>
+                
+                {switchError && (
+                  <p className="mt-4 text-neon-pink text-[10px] font-mono uppercase tracking-widest flex items-center gap-1">
+                    <AlertCircle size={10} />
+                    Switch Rejected
+                  </p>
+                )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <motion.div 
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -111,7 +169,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ score, highScore
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                disabled={isPending || isConfirming}
+                disabled={isPending || isConfirming || isSwitching}
                 onClick={handleSubmission}
                 className="w-full py-4 bg-white/10 border border-white/20 text-white font-semibold text-sm rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:bg-white/15 transition-all flex items-center justify-center gap-2 group overflow-hidden relative"
               >
@@ -145,7 +203,9 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({ score, highScore
                 className="text-neon-pink text-[10px] font-mono text-center mb-2 flex items-center justify-center gap-1"
               >
                 <AlertCircle size={10} />
-                {error.message.includes('User rejected') ? 'Transaction Cancelled' : 'Submission Failed'}
+                { error.message.includes('User rejected') 
+                  ? 'Request Cancelled' 
+                  : 'Submission Failed' }
               </motion.div>
             )}
           </AnimatePresence>
